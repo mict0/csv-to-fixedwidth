@@ -74,6 +74,13 @@ def read_csv_file(file):
     return dict_reader
 
 
+def read_fw_file(file):
+    from io import StringIO
+
+    stringio = StringIO(file.getvalue().decode("utf-8"))
+    return stringio
+
+
 def get_binary_file_downloader_html(bin_file, file_label="File"):
     with open(bin_file, "rb") as f:
         data = f.read()
@@ -82,36 +89,67 @@ def get_binary_file_downloader_html(bin_file, file_label="File"):
     return href
 
 
+def write_csv(data):
+    def get_fieldnames(data):
+        return {k for d in data for k in d.keys()}
+
+    fieldnames = get_fieldnames(data)
+    with open("yourfile.csv", "w") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in data:
+            writer.writerow(row)
+
+
 def main():
 
     st.header("App for converting csv to fixed-width and other way around")
-    st.subheader("Upload config file [.csv]")
-    config_file_upload = st.file_uploader("Choose a file")
+    st.sidebar.subheader("Upload config file [.csv]")
+    st.sidebar.write("Config file should be same for both ways!")
+    config_file_upload = st.sidebar.file_uploader("Choose a file")
     if config_file_upload is not None:
-        lines = ""
+        selection = st.sidebar.selectbox(
+            "What would you like to convert?", ("CSV->FixedWidth", "FixedWidth->CSV")
+        )
         config_file = read_csv_file(config_file_upload)
         CONFIG = create_config(config_file)
         # Reads config for FixedWidth lib
         fw_config = deepcopy(CONFIG)
         fw_obj = FixedWidth(fw_config)
 
-        st.subheader("Upload data file [.csv]")
+        if selection == 'CSV->FixedWidth':
+            st.subheader("Upload CSV file")
+        else:
+            st.subheader("Upload FixedWidth file")
         data_file = st.file_uploader("Upload a data file")
         if data_file is not None:
-            data = read_csv_file(data_file)
-
-            for i, row in enumerate(data):
-                row = clean_row(row)
-                fw_obj.update(**row)
-                fw_string = fw_obj.line
-                lines += fw_string
-            f = open("yourfile.main", "w")
-            f.write(lines)
-            f.close()
-            st.markdown(
-                get_binary_file_downloader_html("yourfile.main", "my_file.main"),
-                unsafe_allow_html=True,
-            )
+            if selection == "CSV->FixedWidth":
+                data = read_csv_file(data_file)
+                lines = ""
+                for i, row in enumerate(data):
+                    row = clean_row(row)
+                    fw_obj.update(**row)
+                    fw_string = fw_obj.line
+                    lines += fw_string
+                f = open("yourfile.main", "w")
+                f.write(lines)
+                f.close()
+                st.markdown(
+                    get_binary_file_downloader_html("yourfile.main", "my_file.main"),
+                    unsafe_allow_html=True,
+                )
+            else:
+                rows = []
+                data = read_fw_file(data_file)
+                for i, row in enumerate(data):
+                    fw_obj.line = row
+                    values = fw_obj.data
+                    rows.append(values)
+                write_csv(rows)
+                st.markdown(
+                    get_binary_file_downloader_html("yourfile.csv", "my_file.csv"),
+                    unsafe_allow_html=True,
+                )
 
 
 main()
