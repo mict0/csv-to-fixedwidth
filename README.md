@@ -1,2 +1,2 @@
-# csv-to-fixedwidth
- Convert csv to fixed-width file using config
+# csv-to-fixedwidth and other way around
+ Convert between csv and fixedwidth files using config
